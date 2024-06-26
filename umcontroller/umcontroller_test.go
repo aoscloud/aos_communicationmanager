@@ -230,7 +230,7 @@ func createClientConnection(
 		return stream, nil, aoserrors.Wrap(err)
 	}
 
-	umMsg := &pb.UpdateStatus{UmId: clientID, UpdateState: state, Components: components}
+	umMsg := &pb.UpdateStatus{NodeId: clientID, UpdateState: state, Components: components}
 
 	if err = stream.Send(umMsg); err != nil {
 		log.Errorf("Fail send update status message %s", err)
