@@ -78,7 +78,7 @@ const (
 
 // NewUmHandler create update manager connection handler.
 func newUmHandler(id string, umStream pb.UMService_RegisterUMServer,
-	messageChannel chan umCtrlInternalMsg, state pb.UmState) (handler *umHandler, closeChannel chan bool, err error,
+	messageChannel chan umCtrlInternalMsg, state pb.UpdateState) (handler *umHandler, closeChannel chan bool, err error,
 ) {
 	handler = &umHandler{umID: id, stream: umStream, messageChannel: messageChannel}
 	handler.closeChannel = make(chan bool)
@@ -87,13 +87,13 @@ func newUmHandler(id string, umStream pb.UMService_RegisterUMServer,
 	initFsmState := hStateIdle
 
 	switch state {
-	case pb.UmState_IDLE:
+	case pb.UpdateState_IDLE:
 		initFsmState = hStateIdle
-	case pb.UmState_PREPARED:
+	case pb.UpdateState_PREPARED:
 		initFsmState = hStateWaitForStartUpdate
-	case pb.UmState_UPDATED:
+	case pb.UpdateState_UPDATED:
 		initFsmState = hStateWaitForApply
-	case pb.UmState_FAILED:
+	case pb.UpdateState_FAILED:
 		log.Error("UM in failure state")
 
 		initFsmState = hStateWaitForRevert
@@ -197,15 +197,15 @@ func (handler *umHandler) receiveData() {
 
 		var evt string
 
-		state := statusMsg.GetUmState()
+		state := statusMsg.GetUpdateState()
 		switch state {
-		case pb.UmState_IDLE:
+		case pb.UpdateState_IDLE:
 			evt = eventIdleState
-		case pb.UmState_PREPARED:
+		case pb.UpdateState_PREPARED:
 			evt = eventPrepareSuccess
-		case pb.UmState_UPDATED:
+		case pb.UpdateState_UPDATED:
 			evt = eventUpdateSuccess
-		case pb.UmState_FAILED:
+		case pb.UpdateState_FAILED:
 			log.Error("Update failure status: ", statusMsg.GetError())
 
 			evt = eventUpdateError
