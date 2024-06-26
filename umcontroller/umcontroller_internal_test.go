@@ -26,7 +26,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/aoscloud/aos_common/aoserrors"
-	pb "github.com/aoscloud/aos_common/api/updatemanager/v1"
+	pb "github.com/aoscloud/aos_common/api/updatemanager"
 )
 
 /***********************************************************************************************************************

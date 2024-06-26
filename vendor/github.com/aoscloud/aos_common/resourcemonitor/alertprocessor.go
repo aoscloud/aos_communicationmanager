@@ -49,17 +49,17 @@ func createAlertProcessor(name string, source *uint64,
 func (alert *alertProcessor) checkAlertDetection(currentTime time.Time) {
 	value := *alert.source
 
-	if value >= alert.rule.MaxThreshold && alert.thresholdTime.IsZero() {
+	if value >= alert.rule.High && alert.thresholdTime.IsZero() {
 		log.WithFields(log.Fields{
-			"name": alert.name, "maxThreshold": alert.rule.MaxThreshold, "value": value,
+			"name": alert.name, "maxThreshold": alert.rule.High, "value": value,
 		}).Debugf("Max threshold crossed")
 
 		alert.thresholdTime = currentTime
 	}
 
-	if value < alert.rule.MinThreshold && !alert.thresholdTime.IsZero() {
+	if value < alert.rule.Low && !alert.thresholdTime.IsZero() {
 		log.WithFields(log.Fields{
-			"name": alert.name, "minThreshold": alert.rule.MinThreshold, "value": value,
+			"name": alert.name, "minThreshold": alert.rule.Low, "value": value,
 		}).Debugf("Min threshold crossed")
 
 		alert.thresholdTime = time.Time{}
@@ -67,7 +67,7 @@ func (alert *alertProcessor) checkAlertDetection(currentTime time.Time) {
 	}
 
 	if !alert.thresholdTime.IsZero() &&
-		currentTime.Sub(alert.thresholdTime) >= alert.rule.MinTimeout.Duration &&
+		currentTime.Sub(alert.thresholdTime) >= alert.rule.Timeout.Duration &&
 		!alert.thresholdDetected {
 		log.WithFields(log.Fields{
 			"name":        alert.name,

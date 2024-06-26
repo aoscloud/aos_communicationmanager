@@ -7,15 +7,16 @@ github.com/ThalesIgnite/crypto11
 # github.com/anexia-it/fsquota v0.0.0-00010101000000-000000000000 => github.com/aoscloud/fsquota v0.0.0-20231127111317-842d831105a7
 ## explicit; go 1.21
 github.com/anexia-it/fsquota
-# github.com/aoscloud/aos_common v0.0.0-20240604124845-20113a8d0c94
+# github.com/aoscloud/aos_common v0.0.0-20240618140014-d87ae30169d9
 ## explicit; go 1.21
 github.com/aoscloud/aos_common/aoserrors
 github.com/aoscloud/aos_common/aostypes
 github.com/aoscloud/aos_common/api/cloudprotocol
-github.com/aoscloud/aos_common/api/communicationmanager/v2
-github.com/aoscloud/aos_common/api/iamanager/v4
-github.com/aoscloud/aos_common/api/servicemanager/v3
-github.com/aoscloud/aos_common/api/updatemanager/v1
+github.com/aoscloud/aos_common/api/common
+github.com/aoscloud/aos_common/api/communicationmanager
+github.com/aoscloud/aos_common/api/iamanager
+github.com/aoscloud/aos_common/api/servicemanager
+github.com/aoscloud/aos_common/api/updatemanager
 github.com/aoscloud/aos_common/image
 github.com/aoscloud/aos_common/journalalerts
 github.com/aoscloud/aos_common/migration

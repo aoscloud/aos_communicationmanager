@@ -20,18 +20,20 @@ package iamclient
 import (
 	"context"
 	"encoding/base64"
+	"io"
 	"sync"
 	"time"
 
 	"github.com/aoscloud/aos_common/aoserrors"
 	"github.com/aoscloud/aos_common/api/cloudprotocol"
-	pb "github.com/aoscloud/aos_common/api/iamanager/v4"
+	pb "github.com/aoscloud/aos_common/api/iamanager"
 	"github.com/aoscloud/aos_common/utils/cryptutils"
 	"github.com/golang/protobuf/ptypes/empty"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/aoscloud/aos_communicationmanager/config"
 )
@@ -257,6 +259,8 @@ func (client *Client) Close() (err error) {
 		client.protectedConnection.Close()
 	}
 
+	client.nodeInfoListeners = nil
+
 	log.Debug("Disconnected from IAM")
 
 	return nil
@@ -302,11 +306,11 @@ func (client *Client) getNodeInfo() (nodeID, nodeType string, err error) {
 	}
 
 	log.WithFields(log.Fields{
-		"nodeID":   response.GetNodeId(),
-		"nodeType": response.GetNodeType(),
+		"nodeID":   response.Id,
+		"nodeType": response.Type,
 	}).Debug("Get node Info")
 
-	return response.GetNodeId(), response.GetNodeType(), nil
+	return response.Id, response.Type, nil
 }
 
 func (client *Client) createProtectedConnection(
