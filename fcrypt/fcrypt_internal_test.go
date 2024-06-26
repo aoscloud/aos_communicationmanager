@@ -40,7 +40,6 @@ import (
 	"time"
 
 	"github.com/aoscloud/aos_common/aoserrors"
-	"github.com/aoscloud/aos_common/api/cloudprotocol"
 	"github.com/aoscloud/aos_common/utils/cryptutils"
 	"github.com/aoscloud/aos_common/utils/testtools"
 	log "github.com/sirupsen/logrus"
@@ -96,7 +95,7 @@ type testUpgradeCertificate struct {
 
 type testUpgradeFileInfo struct {
 	FileData []byte
-	Signs    *cloudprotocol.Signs
+	// Signs    *cloudprotocol.Signs
 }
 
 // UpgradeMetadata upgrade metadata.
@@ -842,12 +841,12 @@ func TestVerifySignOfComponent(t *testing.T) {
 		Data: []testUpgradeFileInfo{
 			{
 				FileData: []byte("test"),
-				Signs: &cloudprotocol.Signs{
-					ChainName:        "8D28D60220B8D08826E283B531A0B1D75359C5EE",
-					Alg:              "RSA/SHA256",
-					Value:            signValue,
-					TrustedTimestamp: time.Now().Format(time.RFC3339),
-				},
+				// Signs: &cloudprotocol.Signs{
+				// 	ChainName:        "8D28D60220B8D08826E283B531A0B1D75359C5EE",
+				// 	Alg:              "RSA/SHA256",
+				// 	Value:            signValue,
+				// 	TrustedTimestamp: time.Now().Format(time.RFC3339),
+				// },
 			},
 		},
 		CertificateChains: []testUpgradeCertificateChain{
