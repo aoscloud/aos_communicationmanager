@@ -70,16 +70,14 @@ type Controller struct {
 	fileServer *fileserver.FileServer
 }
 
-// SystemComponent information about system component update.
-type SystemComponent struct {
-	ID            string `json:"id"`
-	VendorVersion string `json:"vendorVersion"`
-	AosVersion    uint64 `json:"aosVersion"`
-	Annotations   string `json:"annotations,omitempty"`
-	URL           string `json:"url"`
-	Sha256        []byte `json:"sha256"`
-	Sha512        []byte `json:"sha512"`
-	Size          uint64 `json:"size"`
+// ComponentStatus information about system component update.
+type ComponentStatus struct {
+	ID          string `json:"id"`
+	Version     string `json:"version"`
+	Annotations string `json:"annotations,omitempty"`
+	URL         string `json:"url"`
+	Sha256      []byte `json:"sha256"`
+	Size        uint64 `json:"size"`
 }
 
 type umConnection struct {
@@ -89,7 +87,7 @@ type umConnection struct {
 	updatePriority uint32
 	state          string
 	components     []string
-	updatePackages []SystemComponent
+	updatePackages []ComponentStatus
 }
 
 type umCtrlInternalMsg struct {
@@ -105,11 +103,10 @@ type umStatus struct {
 }
 
 type systemComponentStatus struct {
-	id            string
-	vendorVersion string
-	aosVersion    uint64
-	status        string
-	err           string
+	id      string
+	version string
+	status  string
+	err     string
 }
 
 type allConnectionMonitor struct {
@@ -121,8 +118,8 @@ type allConnectionMonitor struct {
 }
 
 type storage interface {
-	GetComponentsUpdateInfo() (updateInfo []SystemComponent, err error)
-	SetComponentsUpdateInfo(updateInfo []SystemComponent) (err error)
+	GetComponentsUpdateInfo() (updateInfo []ComponentStatus, err error)
+	SetComponentsUpdateInfo(updateInfo []ComponentStatus) (err error)
 }
 
 // CertificateProvider certificate and key provider interface.
@@ -300,12 +297,12 @@ func (umCtrl *Controller) UpdateComponents(
 			return umCtrl.currentComponents, nil
 		}
 
-		componentsUpdateInfo := []SystemComponent{}
+		componentsUpdateInfo := []ComponentStatus{}
 
 		for _, component := range components {
 			componentStatus := systemComponentStatus{
-				id: component.ID, vendorVersion: component.VendorVersion,
-				aosVersion: component.AosVersion, status: cloudprotocol.DownloadedStatus,
+				id: component.ComponentID, version: component.Version,
+				status: cloudprotocol.DownloadedStatus,
 			}
 
 			encryptedFile, err := getFilePath(component.URLs[0])
@@ -336,8 +333,8 @@ func (umCtrl *Controller) UpdateComponents(
 				fcrypt.DecryptParams{
 					Chains:         chains,
 					Certs:          certs,
-					DecryptionInfo: component.DecryptionInfo,
-					Signs:          component.Signs,
+					DecryptionInfo: &component.DecryptionInfo,
+					// Signs:          component.Signs,
 				}); err != nil {
 				return umCtrl.currentComponents, aoserrors.Wrap(err)
 			}
@@ -352,10 +349,10 @@ func (umCtrl *Controller) UpdateComponents(
 				Path:   decryptedFile,
 			}
 
-			componentInfo := SystemComponent{
-				ID: component.ID, VendorVersion: component.VendorVersion,
-				AosVersion: component.AosVersion, Annotations: string(component.Annotations),
-				Sha256: fileInfo.Sha256, Sha512: fileInfo.Sha512, Size: fileInfo.Size,
+			componentInfo := ComponentStatus{
+				ID: component.ComponentID, Version: component.Version,
+				Annotations: string(component.Annotations),
+				Sha256:      fileInfo.Sha256, Size: fileInfo.Size,
 				URL: url.String(),
 			}
 
@@ -523,12 +520,12 @@ func (umCtrl *Controller) updateCurrentComponentsStatus(componsStatus []systemCo
 			toRemove := []int{}
 
 			for i, curStatus := range umCtrl.currentComponents {
-				if value.id == curStatus.ID {
+				if value.id == curStatus.ComponentID {
 					if curStatus.Status != cloudprotocol.InstalledStatus {
 						continue
 					}
 
-					if value.vendorVersion != curStatus.VendorVersion {
+					if value.version != curStatus.Version {
 						toRemove = append(toRemove, i)
 						continue
 					}
@@ -549,7 +546,7 @@ func (umCtrl *Controller) updateCurrentComponentsStatus(componsStatus []systemCo
 
 func (umCtrl *Controller) updateComponentElement(component systemComponentStatus) {
 	for i, curElement := range umCtrl.currentComponents {
-		if curElement.ID == component.id && curElement.VendorVersion == component.vendorVersion {
+		if curElement.ComponentID == component.id && curElement.Version == component.version {
 			if curElement.Status == cloudprotocol.InstalledStatus && component.status != cloudprotocol.InstalledStatus {
 				break
 			}
@@ -567,10 +564,9 @@ func (umCtrl *Controller) updateComponentElement(component systemComponentStatus
 	}
 
 	newComponentStatus := cloudprotocol.ComponentStatus{
-		ID:            component.id,
-		VendorVersion: component.vendorVersion,
-		AosVersion:    component.aosVersion,
-		Status:        component.status,
+		ComponentID: component.id,
+		Version:     component.version,
+		Status:      component.status,
 	}
 
 	if component.err != "" {
@@ -625,7 +621,7 @@ func (umCtrl *Controller) getCurrentUpdateState() (state string) {
 
 func (umCtrl *Controller) getUpdateComponentsFromStorage() (err error) {
 	for i := range umCtrl.connections {
-		umCtrl.connections[i].updatePackages = []SystemComponent{}
+		umCtrl.connections[i].updatePackages = []ComponentStatus{}
 	}
 
 	updateComponents, err := umCtrl.storage.GetComponentsUpdateInfo()
@@ -644,7 +640,7 @@ func (umCtrl *Controller) getUpdateComponentsFromStorage() (err error) {
 	return aoserrors.Wrap(err)
 }
 
-func (umCtrl *Controller) addComponentForUpdateToUm(componentInfo SystemComponent) (err error) {
+func (umCtrl *Controller) addComponentForUpdateToUm(componentInfo ComponentStatus) (err error) {
 	for i := range umCtrl.connections {
 		for _, id := range umCtrl.connections[i].components {
 			if id == componentInfo.ID {
@@ -671,7 +667,7 @@ func (umCtrl *Controller) cleanupUpdateData() {
 			umCtrl.allocator.FreeSpace(updatePackage.Size)
 		}
 
-		umCtrl.connections[i].updatePackages = []SystemComponent{}
+		umCtrl.connections[i].updatePackages = []ComponentStatus{}
 	}
 
 	entries, err := os.ReadDir(umCtrl.componentDir)
@@ -706,7 +702,7 @@ func (umCtrl *Controller) cleanupUpdateData() {
 		return
 	}
 
-	if err := umCtrl.storage.SetComponentsUpdateInfo([]SystemComponent{}); err != nil {
+	if err := umCtrl.storage.SetComponentsUpdateInfo([]ComponentStatus{}); err != nil {
 		log.Error("Can't clean components update info ", err)
 	}
 }
@@ -1022,6 +1018,5 @@ func (umCtrl *Controller) updateComplete(ctx context.Context, e *fsm.Event) {
 }
 
 func (status systemComponentStatus) String() string {
-	return fmt.Sprintf("{id: %s, status: %s, vendorVersion: %s aosVersion: %d }",
-		status.id, status.status, status.vendorVersion, status.aosVersion)
+	return fmt.Sprintf("{id: %s, status: %s, version: %s }", status.id, status.status, status.version)
 }

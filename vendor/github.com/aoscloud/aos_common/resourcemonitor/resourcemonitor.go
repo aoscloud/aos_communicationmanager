@@ -94,6 +94,12 @@ type Config struct {
 	Source     string            `json:"source"`
 }
 
+type SystemInfo struct {
+	NumCPUs    uint64                        `json:"numCpus"`
+	TotalRAM   uint64                        `json:"totalRam"`
+	Partitions []cloudprotocol.PartitionInfo `json:"partitions"`
+}
+
 // ResourceMonitor instance.
 type ResourceMonitor struct {
 	sync.Mutex
@@ -108,7 +114,7 @@ type ResourceMonitor struct {
 	pollTimer *time.Ticker
 
 	nodeMonitoringData cloudprotocol.MonitoringData
-	systemInfo         cloudprotocol.SystemInfo
+	systemInfo         SystemInfo
 
 	alertProcessors *list.List
 
@@ -284,7 +290,7 @@ func (monitor *ResourceMonitor) Close() {
 	}
 }
 
-func (monitor *ResourceMonitor) GetSystemInfo() cloudprotocol.SystemInfo {
+func (monitor *ResourceMonitor) GetSystemInfo() SystemInfo {
 	return monitor.systemInfo
 }
 

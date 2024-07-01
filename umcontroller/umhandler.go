@@ -26,7 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/aoscloud/aos_common/aoserrors"
-	pb "github.com/aoscloud/aos_common/api/updatemanager/v1"
+	pb "github.com/aoscloud/aos_common/api/updatemanager"
 )
 
 /***********************************************************************************************************************
@@ -43,7 +43,7 @@ type umHandler struct {
 }
 
 type prepareRequest struct {
-	components []SystemComponent
+	components []ComponentStatus
 }
 
 /***********************************************************************************************************************
@@ -78,7 +78,7 @@ const (
 
 // NewUmHandler create update manager connection handler.
 func newUmHandler(id string, umStream pb.UMService_RegisterUMServer,
-	messageChannel chan umCtrlInternalMsg, state pb.UmState) (handler *umHandler, closeChannel chan bool, err error,
+	messageChannel chan umCtrlInternalMsg, state pb.UpdateState) (handler *umHandler, closeChannel chan bool, err error,
 ) {
 	handler = &umHandler{umID: id, stream: umStream, messageChannel: messageChannel}
 	handler.closeChannel = make(chan bool)
@@ -87,13 +87,13 @@ func newUmHandler(id string, umStream pb.UMService_RegisterUMServer,
 	initFsmState := hStateIdle
 
 	switch state {
-	case pb.UmState_IDLE:
+	case pb.UpdateState_IDLE:
 		initFsmState = hStateIdle
-	case pb.UmState_PREPARED:
+	case pb.UpdateState_PREPARED:
 		initFsmState = hStateWaitForStartUpdate
-	case pb.UmState_UPDATED:
+	case pb.UpdateState_UPDATED:
 		initFsmState = hStateWaitForApply
-	case pb.UmState_FAILED:
+	case pb.UpdateState_FAILED:
 		log.Error("UM in failure state")
 
 		initFsmState = hStateWaitForRevert
@@ -151,7 +151,7 @@ func (handler *umHandler) GetInitialState() (state string) {
 }
 
 // Close close connection.
-func (handler *umHandler) PrepareUpdate(prepareComponents []SystemComponent) (err error) {
+func (handler *umHandler) PrepareUpdate(prepareComponents []ComponentStatus) (err error) {
 	log.Debug("PrepareUpdate for UMID ", handler.umID)
 
 	request := prepareRequest{components: prepareComponents}
@@ -197,15 +197,15 @@ func (handler *umHandler) receiveData() {
 
 		var evt string
 
-		state := statusMsg.GetUmState()
+		state := statusMsg.GetUpdateState()
 		switch state {
-		case pb.UmState_IDLE:
+		case pb.UpdateState_IDLE:
 			evt = eventIdleState
-		case pb.UmState_PREPARED:
+		case pb.UpdateState_PREPARED:
 			evt = eventPrepareSuccess
-		case pb.UmState_UPDATED:
+		case pb.UpdateState_UPDATED:
 			evt = eventUpdateSuccess
-		case pb.UmState_FAILED:
+		case pb.UpdateState_FAILED:
 			log.Error("Update failure status: ", statusMsg.GetError())
 
 			evt = eventUpdateError
@@ -233,14 +233,12 @@ func (handler *umHandler) sendPrepareUpdateRequest(ctx context.Context, e *fsm.E
 
 	for _, value := range request.components {
 		componetInfo := pb.PrepareComponentInfo{
-			Id:            value.ID,
-			VendorVersion: value.VendorVersion,
-			AosVersion:    value.AosVersion,
-			Annotations:   value.Annotations,
-			Url:           value.URL,
-			Sha256:        value.Sha256,
-			Sha512:        value.Sha512,
-			Size:          value.Size,
+			ComponentId: value.ID,
+			Version:     value.Version,
+			Annotations: value.Annotations,
+			Url:         value.URL,
+			Sha256:      value.Sha256,
+			Size:        value.Size,
 		}
 
 		componetForUpdate = append(componetForUpdate, &componetInfo)

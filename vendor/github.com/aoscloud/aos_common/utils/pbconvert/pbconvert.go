@@ -20,7 +20,7 @@ package pbconvert
 import (
 	"github.com/aoscloud/aos_common/aostypes"
 	"github.com/aoscloud/aos_common/api/cloudprotocol"
-	pb "github.com/aoscloud/aos_common/api/servicemanager/v3"
+	pb "github.com/aoscloud/aos_common/api/servicemanager"
 )
 
 /***********************************************************************************************************************

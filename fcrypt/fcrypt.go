@@ -34,7 +34,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aoscloud/aos_common/aoserrors"
 	"github.com/aoscloud/aos_common/api/cloudprotocol"
@@ -112,7 +111,7 @@ type SignContext struct {
 type SignContextInterface interface {
 	AddCertificate(fingerprint string, asn1Bytes []byte) (err error)
 	AddCertificateChain(name string, fingerprints []string) (err error)
-	VerifySign(ctx context.Context, f *os.File, sign *cloudprotocol.Signs) (err error)
+	// VerifySign(ctx context.Context, f *os.File, sign *cloudprotocol.Signs) (err error)
 }
 
 // CertificateProvider interface to get certificate.
@@ -135,7 +134,7 @@ type DecryptParams struct {
 	Chains         []cloudprotocol.CertificateChain
 	Certs          []cloudprotocol.Certificate
 	DecryptionInfo *cloudprotocol.DecryptionInfo
-	Signs          *cloudprotocol.Signs
+	// Signs          *cloudprotocol.Signs
 }
 
 /***********************************************************************************************************************
@@ -242,9 +241,9 @@ func (handler *CryptoHandler) DecryptAndValidate(
 		return err
 	}
 
-	if err = handler.validateSigns(decryptedFile, &params); err != nil {
-		return err
-	}
+	// if err = handler.validateSigns(decryptedFile, &params); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
@@ -392,85 +391,85 @@ func (signContext *SignContext) AddCertificateChain(name string, fingerprints []
 }
 
 // VerifySign verifies signature.
-func (signContext *SignContext) VerifySign(
-	ctx context.Context, f *os.File, sign *cloudprotocol.Signs,
-) (err error) {
-	if len(signContext.signCertificateChains) == 0 || len(signContext.signCertificates) == 0 {
-		return aoserrors.New("sign context not initialized (no certificates)")
-	}
+// func (signContext *SignContext) VerifySign(
+// 	ctx context.Context, f *os.File, sign *cloudprotocol.Signs,
+// ) (err error) {
+// 	if len(signContext.signCertificateChains) == 0 || len(signContext.signCertificates) == 0 {
+// 		return aoserrors.New("sign context not initialized (no certificates)")
+// 	}
 
-	signCert, chain, err := signContext.getSignCertificate(sign.ChainName)
-	if err != nil {
-		return aoserrors.Wrap(err)
-	}
+// 	signCert, chain, err := signContext.getSignCertificate(sign.ChainName)
+// 	if err != nil {
+// 		return aoserrors.Wrap(err)
+// 	}
 
-	signAlgName, signHash, signPadding := decodeSignAlgNames(sign.Alg)
+// 	signAlgName, signHash, signPadding := decodeSignAlgNames(sign.Alg)
 
-	hashFunc, err := getHashFuncBySignHash(signHash)
-	if err != nil {
-		return aoserrors.Wrap(err)
-	}
+// 	hashFunc, err := getHashFuncBySignHash(signHash)
+// 	if err != nil {
+// 		return aoserrors.Wrap(err)
+// 	}
 
-	hash := hashFunc.New()
-	if _, err = io.Copy(hash, contextreader.New(ctx, f)); err != nil {
-		log.Errorf("Error hashing file: %s", err)
+// 	hash := hashFunc.New()
+// 	if _, err = io.Copy(hash, contextreader.New(ctx, f)); err != nil {
+// 		log.Errorf("Error hashing file: %s", err)
 
-		return aoserrors.Wrap(err)
-	}
+// 		return aoserrors.Wrap(err)
+// 	}
 
-	switch signAlgName {
-	case "RSA":
-		publicKey, ok := signCert.PublicKey.(*rsa.PublicKey)
-		if !ok {
-			return aoserrors.New("incorrect RSA public key data type")
-		}
+// 	switch signAlgName {
+// 	case "RSA":
+// 		publicKey, ok := signCert.PublicKey.(*rsa.PublicKey)
+// 		if !ok {
+// 			return aoserrors.New("incorrect RSA public key data type")
+// 		}
 
-		switch signPadding {
-		case "PKCS1v1_5":
-			if err = rsa.VerifyPKCS1v15(publicKey, hashFunc.HashFunc(), hash.Sum(nil), sign.Value); err != nil {
-				return aoserrors.Wrap(err)
-			}
+// 		switch signPadding {
+// 		case "PKCS1v1_5":
+// 			if err = rsa.VerifyPKCS1v15(publicKey, hashFunc.HashFunc(), hash.Sum(nil), sign.Value); err != nil {
+// 				return aoserrors.Wrap(err)
+// 			}
 
-		case "PSS":
-			if err = rsa.VerifyPSS(publicKey, hashFunc.HashFunc(), hash.Sum(nil), sign.Value, nil); err != nil {
-				return aoserrors.Wrap(err)
-			}
+// 		case "PSS":
+// 			if err = rsa.VerifyPSS(publicKey, hashFunc.HashFunc(), hash.Sum(nil), sign.Value, nil); err != nil {
+// 				return aoserrors.Wrap(err)
+// 			}
 
-		default:
-			return aoserrors.New("unknown scheme for RSA signature: " + signPadding)
-		}
+// 		default:
+// 			return aoserrors.New("unknown scheme for RSA signature: " + signPadding)
+// 		}
 
-	default:
-		return aoserrors.New("unknown or unsupported signature alg: " + signAlgName)
-	}
+// 	default:
+// 		return aoserrors.New("unknown or unsupported signature alg: " + signAlgName)
+// 	}
 
-	// Sign ok, verify certs
+// 	// Sign ok, verify certs
 
-	intermediatePool, err := signContext.getIntermediateCertPool(chain)
-	if err != nil {
-		return err
-	}
+// 	intermediatePool, err := signContext.getIntermediateCertPool(chain)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	signTime, err := time.Parse(time.RFC3339, sign.TrustedTimestamp)
-	if err != nil {
-		return aoserrors.Wrap(err)
-	}
+// 	signTime, err := time.Parse(time.RFC3339, sign.TrustedTimestamp)
+// 	if err != nil {
+// 		return aoserrors.Wrap(err)
+// 	}
 
-	verifyOptions := x509.VerifyOptions{
-		CurrentTime:   signTime,
-		Intermediates: intermediatePool,
-		Roots:         signContext.handler.cryptoContext.GetCACertPool(),
-		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
-	}
+// 	verifyOptions := x509.VerifyOptions{
+// 		CurrentTime:   signTime,
+// 		Intermediates: intermediatePool,
+// 		Roots:         signContext.handler.cryptoContext.GetCACertPool(),
+// 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+// 	}
 
-	if _, err = signCert.Verify(verifyOptions); err != nil {
-		log.Errorf("Error verifying certificate chain: %s", err)
+// 	if _, err = signCert.Verify(verifyOptions); err != nil {
+// 		log.Errorf("Error verifying certificate chain: %s", err)
 
-		return aoserrors.Wrap(err)
-	}
+// 		return aoserrors.Wrap(err)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // CreateSymmetricCipherContext creates symmetric cipher context.
 func CreateSymmetricCipherContext() (symContext *SymmetricCipherContext) {
@@ -574,36 +573,36 @@ func (handler *CryptoHandler) decrypt(encryptedFile, decryptedFile string, param
 	return aoserrors.Wrap(err)
 }
 
-func (handler *CryptoHandler) validateSigns(decryptedFile string, params *DecryptParams) (err error) {
-	signCtx, err := handler.CreateSignContext()
-	if err != nil {
-		return aoserrors.Wrap(err)
-	}
+// func (handler *CryptoHandler) validateSigns(decryptedFile string, params *DecryptParams) (err error) {
+// 	signCtx, err := handler.CreateSignContext()
+// 	if err != nil {
+// 		return aoserrors.Wrap(err)
+// 	}
 
-	for _, cert := range params.Certs {
-		if err = signCtx.AddCertificate(cert.Fingerprint, cert.Certificate); err != nil {
-			return aoserrors.Wrap(err)
-		}
-	}
+// 	for _, cert := range params.Certs {
+// 		if err = signCtx.AddCertificate(cert.Fingerprint, cert.Certificate); err != nil {
+// 			return aoserrors.Wrap(err)
+// 		}
+// 	}
 
-	for _, chain := range params.Chains {
-		if err = signCtx.AddCertificateChain(chain.Name, chain.Fingerprints); err != nil {
-			return aoserrors.Wrap(err)
-		}
-	}
+// 	for _, chain := range params.Chains {
+// 		if err = signCtx.AddCertificateChain(chain.Name, chain.Fingerprints); err != nil {
+// 			return aoserrors.Wrap(err)
+// 		}
+// 	}
 
-	file, err := os.Open(decryptedFile)
-	if err != nil {
-		return aoserrors.Wrap(err)
-	}
-	defer file.Close()
+// 	file, err := os.Open(decryptedFile)
+// 	if err != nil {
+// 		return aoserrors.Wrap(err)
+// 	}
+// 	defer file.Close()
 
-	if err = signCtx.VerifySign(context.Background(), file, params.Signs); err != nil {
-		return aoserrors.Wrap(err)
-	}
+// 	if err = signCtx.VerifySign(context.Background(), file, params.Signs); err != nil {
+// 		return aoserrors.Wrap(err)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func getRawCertificate(certs []*x509.Certificate) (rawCerts [][]byte) {
 	rawCerts = make([][]byte, 0, len(certs))
